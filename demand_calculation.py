@@ -4,7 +4,6 @@ import pytz
 # import fcntl
 import csv
 import os
-import fasteners
 from copy import deepcopy
 
 
@@ -83,16 +82,17 @@ def rolling_window_demand(start_datetime, end_datetime, window_length_minutes):
 	while i < len(time_points_list):
 
 		timepointA = time_points_list[i]
-		timepointB = time_points_list[i + window_length_minutes]
-		energy_at_A = energy_accumulated_list[i]
-		energy_at_B = energy_accumulated_list[i + window_length_minutes]
-		demand_power = (int(energy_at_B) - int(energy_at_A)) * (60/window_length_minutes)
-		timepoint_energy_dict[timepointA] = demand_power
+		if (i + window_length_minutes) < len(time_points_list):
+			timepointB = time_points_list[i + window_length_minutes]
+			energy_at_A = energy_accumulated_list[i]
+			energy_at_B = energy_accumulated_list[i + window_length_minutes]
+			demand_power = (int(energy_at_B) - int(energy_at_A)) * (60/window_length_minutes)
+			timepoint_energy_dict[timepointA] = demand_power
 		i = i + 1
 	
 	sorted_list = sorted(timepoint_energy_dict.items(), key = lambda x:(x[1], x[0]))
-	final = [sorted_list[-1]]
-	return dict(final)
+	(time, demand) = sorted_list[-1]
+	return {"peak_demand": demand, "start_datetime": time}
 
 
 def time_based_window_demand(start_datetime, end_datetime, window_length_minutes):
@@ -106,34 +106,37 @@ def time_based_window_demand(start_datetime, end_datetime, window_length_minutes
 	while i < len(time_points_list):
 
 		timepointA = time_points_list[i]
-		timepointB = time_points_list[i + window_length_minutes]
-		energy_at_A = energy_accumulated_list[i]
-		energy_at_B = energy_accumulated_list[i + window_length_minutes]
-		demand_power = (int(energy_at_B) - int(energy_at_A)) * (60/window_length_minutes)
-		timepoint_energy_dict[timepointA] = demand_power
+		if (i + window_length_minutes) < len(time_points_list):
+			timepointB = time_points_list[i + window_length_minutes]
+			energy_at_A = energy_accumulated_list[i]
+			energy_at_B = energy_accumulated_list[i + window_length_minutes]
+			demand_power = (int(energy_at_B) - int(energy_at_A)) * (60/window_length_minutes)
+			timepoint_energy_dict[timepointA] = demand_power
 		i = i + window_length_minutes
 	
 	sorted_list = sorted(timepoint_energy_dict.items(), key = lambda x:(x[1], x[0]))
-	final = [sorted_list[-1]]
-	return dict(final)
+	(time, demand) = sorted_list[-1]
+	return {"peak_demand": demand, "start_datetime": time}
 
 
 def find_peak_demand(start_datetime, end_datetime, window_type, window_length_minutes):
 	if window_type == windows[0]:
 		if window_length_minutes in window_lengths:
-			rolling_window_demand(start_datetime, end_datetime, window_length_minutes)
+			a = start_datetime
+			b = end_datetime
+			window = window_length_minutes
+			return rolling_window_demand(a, b, window)
 
 	elif window_type == windows[1]:
 		if window_length_minutes in window_lengths:
-			time_based_window_demand(start_datetime, end_datetime, window_length_minutes)
+			a = start_datetime
+			b = end_datetime
+			window = window_length_minutes
+			return time_based_window_demand(a, b, window)
 	
 	else:
 		return "invalid window type, plz give proper window type"
 
 
-
 if __name__=="__main__":
-	start_datetime="2021-09-01T08:00"
-	end_datetime = "2021-09-01T09:00"
-	window_length_minutes = 15
-	print(rolling_window_demand(start_datetime, end_datetime, window_length_minutes))
+	print(find_peak_demand('2021-09-01T08:00', '2021-09-01T09:00', 'rolling', 15))
